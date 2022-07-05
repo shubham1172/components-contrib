@@ -63,6 +63,7 @@ const (
 )
 
 type Pulsar struct {
+	pubsub.DefaultMultiPubsub
 	logger   logger.Logger
 	client   pulsar.Client
 	metadata pulsarMetadata

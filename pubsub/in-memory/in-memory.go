@@ -23,6 +23,7 @@ import (
 )
 
 type bus struct {
+	pubsub.DefaultMultiPubsub
 	bus EventBus.Bus
 	log logger.Logger
 }

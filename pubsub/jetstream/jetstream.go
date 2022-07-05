@@ -27,6 +27,7 @@ import (
 )
 
 type jetstreamPubSub struct {
+	pubsub.DefaultMultiPubsub
 	nc   *nats.Conn
 	jsc  nats.JetStreamContext
 	l    logger.Logger

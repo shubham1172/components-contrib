@@ -13,10 +13,13 @@ limitations under the License.
 
 package pubsub
 
-import "context"
+import (
+	"context"
+)
 
 // PubSub is the interface for message buses.
 type PubSub interface {
+	MultiPubsub
 	Init(metadata Metadata) error
 	Features() []Feature
 	Publish(req *PublishRequest) error
@@ -24,5 +27,34 @@ type PubSub interface {
 	Close() error
 }
 
+type MultiPubsub interface {
+	BatchPublish(req *BatchPublishRequest) error
+	BulkSubscribe(ctx context.Context, req SubscribeRequest, handler MultiMessageHandler) error
+}
+
 // Handler is the handler used to invoke the app handler.
 type Handler func(ctx context.Context, msg *NewMessage) error
+
+// MultiMessageHandler is the handler used to invoke the app handler.
+type MultiMessageHandler func(ctx context.Context, msg []*NewMessage) error
+
+type DefaultMultiPubsub struct {
+	p PubSub
+}
+
+// NewDefaultBulkStore build a default bulk store.
+func NewDefaultMultiPubsub(pubsub PubSub) DefaultMultiPubsub {
+	defaultMultiPubsub := DefaultMultiPubsub{}
+	defaultMultiPubsub.p = pubsub
+
+	return defaultMultiPubsub
+}
+
+// TODO @mukundansundar implement BatchPublish and BulkSubscribe
+func (p *DefaultMultiPubsub) BatchPublish(req *BatchPublishRequest) error {
+	return nil
+}
+
+func (p *DefaultMultiPubsub) BulkSubscribe(tx context.Context, req SubscribeRequest, handler MultiMessageHandler) error {
+	return nil
+}

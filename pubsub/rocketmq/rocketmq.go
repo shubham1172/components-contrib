@@ -41,6 +41,7 @@ type topicData struct {
 }
 
 type rocketMQ struct {
+	pubsub.DefaultMultiPubsub
 	name     string
 	metadata *rocketMQMetaData
 

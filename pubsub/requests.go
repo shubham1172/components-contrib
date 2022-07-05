@@ -22,6 +22,15 @@ type PublishRequest struct {
 	ContentType *string           `json:"contentType,omitempty"`
 }
 
+// BatchPublishRequest is the request to publish mutilple messages.
+type BatchPublishRequest struct {
+	Data        [][]byte          `json:"data"`
+	PubsubName  string            `json:"pubsubname"`
+	Topic       string            `json:"topic"`
+	Metadata    map[string]string `json:"metadata"`
+	ContentType *string           `json:"contentType,omitempty"`
+}
+
 // SubscribeRequest is the request to subscribe to a topic.
 type SubscribeRequest struct {
 	Topic    string            `json:"topic"`
