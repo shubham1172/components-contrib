@@ -68,7 +68,7 @@ const (
 )
 
 type natsStreamingPubSub struct {
-	pubsub.DefaultMultiPubsub
+	pubsub.DefaultMultiPubSub
 	metadata         metadata
 	natStreamingConn stan.Conn
 

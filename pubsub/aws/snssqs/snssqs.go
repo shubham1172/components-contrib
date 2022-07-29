@@ -44,7 +44,7 @@ type topicHandler struct {
 }
 
 type snsSqs struct {
-	pubsub.DefaultMultiPubsub
+	pubsub.DefaultMultiPubSub
 	// key is the sanitized topic name
 	topicArns map[string]string
 	// key is the sanitized topic name

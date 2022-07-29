@@ -19,7 +19,7 @@ import (
 
 // PubSub is the interface for message buses.
 type PubSub interface {
-	MultiPubsub
+	MultiPubSub
 	Init(metadata Metadata) error
 	Features() []Feature
 	Publish(req *PublishRequest) error
@@ -27,7 +27,7 @@ type PubSub interface {
 	Close() error
 }
 
-type MultiPubsub interface {
+type MultiPubSub interface {
 	BatchPublish(req *BatchPublishRequest) error
 	BulkSubscribe(ctx context.Context, req SubscribeRequest, handler MultiMessageHandler) error
 }
@@ -38,23 +38,38 @@ type Handler func(ctx context.Context, msg *NewMessage) error
 // MultiMessageHandler is the handler used to invoke the app handler.
 type MultiMessageHandler func(ctx context.Context, msg []*NewMessage) error
 
-type DefaultMultiPubsub struct {
+type DefaultMultiPubSub struct {
 	p PubSub
 }
 
 // NewDefaultBulkStore build a default bulk store.
-func NewDefaultMultiPubsub(pubsub PubSub) DefaultMultiPubsub {
-	defaultMultiPubsub := DefaultMultiPubsub{}
-	defaultMultiPubsub.p = pubsub
+func NewDefaultMultiPubsub(pubsub PubSub) DefaultMultiPubSub {
+	defaultMultiPubSub := DefaultMultiPubSub{}
+	defaultMultiPubSub.p = pubsub
 
-	return defaultMultiPubsub
+	return defaultMultiPubSub
 }
 
-// TODO @mukundansundar implement BatchPublish and BulkSubscribe
-func (p *DefaultMultiPubsub) BatchPublish(req *BatchPublishRequest) error {
+// BatchPublish publishes a batch of messages one by one.
+// This implementation is used when the broker does not support batching.
+// If a publish message fails, the whole batch will be failed.
+func (p *DefaultMultiPubSub) BatchPublish(req *BatchPublishRequest) error {
+	for _, msg := range req.Messages {
+		req := &PublishRequest{
+			Data:        msg.Data,
+			PubsubName:  req.PubsubName,
+			Topic:       msg.Topic,
+			Metadata:    req.Metadata,
+			ContentType: msg.ContentType,
+		}
+		err := p.p.Publish(req)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func (p *DefaultMultiPubsub) BulkSubscribe(tx context.Context, req SubscribeRequest, handler MultiMessageHandler) error {
+func (p *DefaultMultiPubSub) BulkSubscribe(tx context.Context, req SubscribeRequest, handler MultiMessageHandler) error {
 	return nil
 }

@@ -23,7 +23,7 @@ import (
 )
 
 type PubSub struct {
-	pubsub.DefaultMultiPubsub
+	pubsub.DefaultMultiPubSub
 	kafka           *kafka.Kafka
 	logger          logger.Logger
 	subscribeCtx    context.Context

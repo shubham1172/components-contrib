@@ -22,19 +22,30 @@ type PublishRequest struct {
 	ContentType *string           `json:"contentType,omitempty"`
 }
 
-// BatchPublishRequest is the request to publish mutilple messages.
+// BatchPublishMessage is a message from a BatchPublishRequest.
+type BatchPublishMessage struct {
+	Data        []byte  `json:"data"`
+	Topic       string  `json:"topic"`
+	ContentType *string `json:"contentType,omitempty"`
+}
+
+// BatchPublishRequest is the request to publish multiple messages.
 type BatchPublishRequest struct {
-	Data        [][]byte          `json:"data"`
-	PubsubName  string            `json:"pubsubname"`
-	Topic       string            `json:"topic"`
-	Metadata    map[string]string `json:"metadata"`
-	ContentType *string           `json:"contentType,omitempty"`
+	PubsubName string                `json:"pubsubname"`
+	Metadata   map[string]string     `json:"metadata"`
+	Messages   []BatchPublishMessage `json:"messages"`
 }
 
 // SubscribeRequest is the request to subscribe to a topic.
 type SubscribeRequest struct {
 	Topic    string            `json:"topic"`
 	Metadata map[string]string `json:"metadata"`
+}
+
+// BulkSubscribeRequest is the request to receive multiple messages.
+type BulkSubscribeRequest struct {
+	PubSubName string            `json:"pubsubname"`
+	Metadata   map[string]string `json:"metadata"`
 }
 
 // NewMessage is an event arriving from a message bus instance.
