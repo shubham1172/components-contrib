@@ -74,7 +74,25 @@ func (p *DefaultMultiPubSub) BatchPublish(req *BatchPublishRequest) error {
 	return errs.Wait()
 }
 
-// BulkSubsribe subscribes
-func (p *DefaultMultiPubSub) BulkSubscribe(tx context.Context, req SubscribeRequest, handler MultiMessageHandler) error {
+// BulkSubsribe subscribes to a topic using a multi-message handler,
+// that can be used to receive multiple messages at once.
+func (p *DefaultMultiPubSub) BulkSubscribe(ctx context.Context, req SubscribeRequest, handler MultiMessageHandler) error {
+	// Create a buffered channel to receive messages.
+	c := make(chan *NewMessage, 100)
+	p.p.Subscribe(ctx, req, func(ctx context.Context, msg *NewMessage) error {
+		c <- msg
+		return nil
+	})
+	// Start a goroutine to handle the messages.
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case msg := <-c:
+				handler(ctx, []*NewMessage{msg})
+			}
+		}
+	}()
 	return nil
 }
