@@ -15,6 +15,8 @@ package pubsub
 
 import (
 	"context"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // PubSub is the interface for message buses.
@@ -50,24 +52,26 @@ func NewDefaultMultiPubsub(pubsub PubSub) DefaultMultiPubSub {
 	return defaultMultiPubSub
 }
 
-// BatchPublish publishes a batch of messages one by one.
+// BatchPublish publishes a batch of messages individually, as parallel requests.
 // This implementation is used when the broker does not support batching.
 // If a publish message fails, the whole batch will be failed.
 func (p *DefaultMultiPubSub) BatchPublish(req *BatchPublishRequest) error {
+	errs, _ := errgroup.WithContext(context.TODO())
 	for _, msg := range req.Messages {
-		req := &PublishRequest{
-			Data:        msg.Data,
-			PubsubName:  req.PubsubName,
-			Topic:       msg.Topic,
-			Metadata:    req.Metadata,
-			ContentType: msg.ContentType,
-		}
-		err := p.p.Publish(req)
-		if err != nil {
-			return err
-		}
+		m := msg
+		errs.Go(func() error {
+			req := &PublishRequest{
+				Data:        m.Data,
+				PubsubName:  req.PubsubName,
+				Topic:       req.Topic,
+				Metadata:    req.Metadata,
+				ContentType: req.ContentType,
+			}
+			return p.p.Publish(req)
+		})
 	}
-	return nil
+
+	return errs.Wait()
 }
 
 func (p *DefaultMultiPubSub) BulkSubscribe(tx context.Context, req SubscribeRequest, handler MultiMessageHandler) error {
