@@ -57,11 +57,11 @@ func NewDefaultMultiPubsub(pubsub PubSub) DefaultMultiPubSub {
 // If a publish message fails, the whole batch will be failed.
 func (p *DefaultMultiPubSub) BatchPublish(req *BatchPublishRequest) error {
 	errs, _ := errgroup.WithContext(context.TODO())
-	for _, msg := range req.Messages {
-		m := msg
+	for i := range req.Data {
+		id := i
 		errs.Go(func() error {
 			req := &PublishRequest{
-				Data:        m.Data,
+				Data:        req.Data[id],
 				PubsubName:  req.PubsubName,
 				Topic:       req.Topic,
 				Metadata:    req.Metadata,
@@ -74,6 +74,7 @@ func (p *DefaultMultiPubSub) BatchPublish(req *BatchPublishRequest) error {
 	return errs.Wait()
 }
 
+// BulkSubsribe subscribes
 func (p *DefaultMultiPubSub) BulkSubscribe(tx context.Context, req SubscribeRequest, handler MultiMessageHandler) error {
 	return nil
 }

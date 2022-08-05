@@ -22,18 +22,13 @@ type PublishRequest struct {
 	ContentType *string           `json:"contentType,omitempty"`
 }
 
-// BatchPublishMessage is a message from a BatchPublishRequest.
-type BatchPublishMessage struct {
-	Data []byte `json:"data"`
-}
-
 // BatchPublishRequest is the message to publish events data to pubsub topic
 type BatchPublishRequest struct {
-	PubsubName  string                `json:"pubsubname"`
-	Topic       string                `json:"topic"`
-	Messages    []BatchPublishMessage `json:"messages"`
-	ContentType *string               `json:"contentType,omitempty"`
-	Metadata    map[string]string     `json:"metadata"`
+	PubsubName  string            `json:"pubsubname"`
+	Topic       string            `json:"topic"`
+	Data        [][]byte          `json:"data"`
+	ContentType *string           `json:"contentType,omitempty"`
+	Metadata    map[string]string `json:"metadata"`
 }
 
 // SubscribeRequest is the request to subscribe to a topic.
