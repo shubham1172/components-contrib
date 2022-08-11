@@ -78,21 +78,17 @@ func (p *DefaultMultiPubSub) BatchPublish(req *BatchPublishRequest) error {
 // that can be used to receive multiple messages at once.
 func (p *DefaultMultiPubSub) BulkSubscribe(ctx context.Context, req SubscribeRequest, handler MultiMessageHandler) error {
 	// Create a buffered channel to receive messages.
-	c := make(chan *NewMessage, 100)
+	msgs := make(chan *NewMessage, 100)
+
+	// TODO: Read maxBatchCount from metadata.
+	maxBatchCount := 100
+
 	p.p.Subscribe(ctx, req, func(ctx context.Context, msg *NewMessage) error {
-		c <- msg
+		msgs <- msg
 		return nil
 	})
+
 	// Start a goroutine to handle the messages.
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case msg := <-c:
-				handler(ctx, []*NewMessage{msg})
-			}
-		}
-	}()
+	go processBulkMessages(ctx, msgs, maxBatchCount, handler)
 	return nil
 }

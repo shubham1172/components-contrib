@@ -13,10 +13,29 @@ limitations under the License.
 
 package pubsub
 
+import "context"
+
 const (
-	// maxBatchSizeKey is the maximum number of messages to be published in a batch.
-	maxBatchSizeKey = "maxBatchSize"
-	// maxBatchTimeoutMsKey is the maximum time to wait before sending a batch of messages.
-	// This is used to prevent waiting for individual messages for a large time.
-	maxFetchWaitMsKey = "maxBatchTimeoutMs"
+	// maxBatchCountKey is the maximum number of messages to be published in a batch.
+	maxBatchCountKey = "maxBatchCount"
 )
+
+// processBulkMessages reads messages from the channel and publishes them MultiMessageHandler.
+// It buffers messages in memory and publishes them in batches.
+// TODO: Do not just use maxBatchCount, but also introduce maxBatchSizeBytes and maxBatchTimeoutMs.
+func processBulkMessages(ctx context.Context, msgChan <-chan *NewMessage, maxBatchCount int, handler MultiMessageHandler) {
+	var messages []*NewMessage
+	for msg := range msgChan {
+		messages = append(messages, msg)
+		if len(messages) == maxBatchCount {
+			_ = handler(ctx, messages)
+			// TODO: Handle error.
+			messages = nil
+		}
+	}
+	// Handle remaining messages.
+	if len(messages) > 0 {
+		_ = handler(ctx, messages)
+		// TODO: Handle error.
+	}
+}
