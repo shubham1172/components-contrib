@@ -18,16 +18,26 @@ import "context"
 const (
 	// maxBatchCountKey is the maximum number of messages to be published in a batch.
 	maxBatchCountKey = "maxBatchCount"
+	// maxBatchSizeBytesKey is the maximum size of a batch in bytes.
+	maxBatchSizeKey = "maxBatchSizeBytes"
+	// maxBatchDelayMsKey is the maximum delay in milliseconds before publishing a batch.
+	maxBatchDelayMsKey = "maxBatchDelayMs"
 )
 
-// processBulkMessages reads messages from the channel and publishes them MultiMessageHandler.
+type bulkMessageOptions struct {
+	maxBatchCount     int
+	maxBatchSizeBytes int
+	maxBatchDelayMs   int
+}
+
+// processBulkMessages reads messages from the channel and publishes them to MultiMessageHandler.
 // It buffers messages in memory and publishes them in batches.
 // TODO: Do not just use maxBatchCount, but also introduce maxBatchSizeBytes and maxBatchTimeoutMs.
-func processBulkMessages(ctx context.Context, msgChan <-chan *NewMessage, maxBatchCount int, handler MultiMessageHandler) {
+func processBulkMessages(ctx context.Context, msgChan <-chan *NewMessage, opts bulkMessageOptions, handler MultiMessageHandler) {
 	var messages []*NewMessage
 	for msg := range msgChan {
 		messages = append(messages, msg)
-		if len(messages) == maxBatchCount {
+		if len(messages) == opts.maxBatchCount {
 			_ = handler(ctx, messages)
 			// TODO: Handle error.
 			messages = nil

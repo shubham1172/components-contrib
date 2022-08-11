@@ -15,6 +15,7 @@ package pubsub
 
 import (
 	"context"
+	"strconv"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -80,8 +81,11 @@ func (p *DefaultMultiPubSub) BulkSubscribe(ctx context.Context, req SubscribeReq
 	// Create a buffered channel to receive messages.
 	msgs := make(chan *NewMessage, 100)
 
-	// TODO: Read maxBatchCount from metadata.
-	maxBatchCount := 100
+	opts := bulkMessageOptions{
+		maxBatchCount:     getIntOrDefault(req.Metadata, maxBatchCountKey, 100),
+		maxBatchSizeBytes: getIntOrDefault(req.Metadata, maxBatchSizeKey, 1024),
+		maxBatchDelayMs:   getIntOrDefault(req.Metadata, maxBatchDelayMsKey, 5*1000),
+	}
 
 	p.p.Subscribe(ctx, req, func(ctx context.Context, msg *NewMessage) error {
 		msgs <- msg
@@ -89,6 +93,17 @@ func (p *DefaultMultiPubSub) BulkSubscribe(ctx context.Context, req SubscribeReq
 	})
 
 	// Start a goroutine to handle the messages.
-	go processBulkMessages(ctx, msgs, maxBatchCount, handler)
+	go processBulkMessages(ctx, msgs, opts, handler)
 	return nil
+}
+
+// getIntOrDefault returns the value of the property with the given key as integer,
+// or the default value if the property is not set.
+func getIntOrDefault(m map[string]string, key string, def int) int {
+	if val, ok := m[key]; ok {
+		if i, err := strconv.Atoi(val); err == nil {
+			return i
+		}
+	}
+	return def
 }
