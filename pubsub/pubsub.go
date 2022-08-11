@@ -78,8 +78,8 @@ func (p *DefaultMultiPubSub) BatchPublish(req *BatchPublishRequest) error {
 // BulkSubsribe subscribes to a topic using a multi-message handler,
 // that can be used to receive multiple messages at once.
 func (p *DefaultMultiPubSub) BulkSubscribe(ctx context.Context, req SubscribeRequest, handler MultiMessageHandler) error {
-	// Create a buffered channel to receive messages.
-	msgs := make(chan *NewMessage, 100)
+	// TODO: how much should we buffer?
+	msgs := make(chan *NewMessage, 1000)
 
 	opts := bulkMessageOptions{
 		maxBatchCount:     getIntOrDefault(req.Metadata, maxBatchCountKey, 100),
@@ -87,14 +87,13 @@ func (p *DefaultMultiPubSub) BulkSubscribe(ctx context.Context, req SubscribeReq
 		maxBatchDelayMs:   getIntOrDefault(req.Metadata, maxBatchDelayMsKey, 5*1000),
 	}
 
-	p.p.Subscribe(ctx, req, func(ctx context.Context, msg *NewMessage) error {
+	// Start a goroutine to handle the messages.
+	go processBulkMessages(ctx, msgs, opts, handler)
+
+	return p.p.Subscribe(ctx, req, func(ctx context.Context, msg *NewMessage) error {
 		msgs <- msg
 		return nil
 	})
-
-	// Start a goroutine to handle the messages.
-	go processBulkMessages(ctx, msgs, opts, handler)
-	return nil
 }
 
 // getIntOrDefault returns the value of the property with the given key as integer,

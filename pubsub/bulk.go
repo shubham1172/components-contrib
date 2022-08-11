@@ -13,7 +13,10 @@ limitations under the License.
 
 package pubsub
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 const (
 	// maxBatchCountKey is the maximum number of messages to be published in a batch.
@@ -30,22 +33,37 @@ type bulkMessageOptions struct {
 	maxBatchDelayMs   int
 }
 
+// writes messages to the MultiMessageHandler.
+func flushMessages(messages []*NewMessage, handler MultiMessageHandler) {
+	if len(messages) > 0 {
+		// TODO: log error
+		handler(context.Background(), messages)
+	}
+}
+
 // processBulkMessages reads messages from the channel and publishes them to MultiMessageHandler.
 // It buffers messages in memory and publishes them in batches.
 // TODO: Do not just use maxBatchCount, but also introduce maxBatchSizeBytes and maxBatchTimeoutMs.
 func processBulkMessages(ctx context.Context, msgChan <-chan *NewMessage, opts bulkMessageOptions, handler MultiMessageHandler) {
 	var messages []*NewMessage
-	for msg := range msgChan {
-		messages = append(messages, msg)
-		if len(messages) == opts.maxBatchCount {
-			_ = handler(ctx, messages)
-			// TODO: Handle error.
-			messages = nil
+	var currSize int
+
+	ticker := time.NewTicker(time.Duration(opts.maxBatchDelayMs) * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			flushMessages(messages, handler)
+			return
+		case msg := <-msgChan:
+			currSize += 0 // TODO: figure out the size of message
+			messages = append(messages, msg)
+			if len(messages) >= opts.maxBatchCount || currSize >= opts.maxBatchSizeBytes {
+				flushMessages(messages, handler)
+			}
+		case <-ticker.C:
+			flushMessages(messages, handler)
 		}
-	}
-	// Handle remaining messages.
-	if len(messages) > 0 {
-		_ = handler(ctx, messages)
-		// TODO: Handle error.
 	}
 }
