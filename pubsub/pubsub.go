@@ -39,7 +39,7 @@ type Batcher interface {
 type Handler func(ctx context.Context, msg *NewMessage) error
 
 // BatchHandler is the handler used to invoke the app handler for batch messages.
-type BatchHandler func(ctx context.Context, msg *NewBatchMessage) BatchHandlerResponse
+type BatchHandler func(ctx context.Context, msg *NewBatchMessage) (error, []BatchMessageResponse)
 
 func Ping(pubsub PubSub) error {
 	// checks if this pubsub has the ping option then executes
