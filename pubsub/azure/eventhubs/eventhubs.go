@@ -128,7 +128,6 @@ func subscribeHandler(ctx context.Context, topic string, e *eventhub.Event, hand
 
 // AzureEventHubs allows sending/receiving Azure Event Hubs events.
 type AzureEventHubs struct {
-	pubsub.DefaultBatcher
 	metadata           *azureEventHubsMetadata
 	logger             logger.Logger
 	publishCtx         context.Context
@@ -565,6 +564,33 @@ func (aeh *AzureEventHubs) Publish(req *pubsub.PublishRequest) error {
 	return nil
 }
 
+// BatchPublish sends data to Azure Event Hubs in batches.
+func (aeh *AzureEventHubs) BatchPublish(req *pubsub.BatchPublishRequest) pubsub.BatchPublishResponse {
+	if _, ok := aeh.hubClients[req.Topic]; !ok {
+		if err := aeh.ensurePublisherClient(aeh.publishCtx, req.Topic); err != nil {
+			return pubsub.NewBatchPublishResponse(req.Messages, pubsub.BatchMessageFail).
+				WithError(fmt.Errorf("error on establishing hub connection: %s", err))
+		}
+	}
+	var events []*eventhub.Event
+	for _, message := range req.Messages {
+		event := &eventhub.Event{Data: message.Event}
+		val, ok := message.Metadata[partitionKeyMetadataKey]
+		if ok {
+			event.PartitionKey = &val
+		}
+		events = append(events, event)
+	}
+
+	err := aeh.hubClients[req.Topic].SendBatch(aeh.publishCtx, eventhub.NewEventBatchIterator(events...))
+	if err != nil {
+		return pubsub.NewBatchPublishResponse(req.Messages, pubsub.BatchMessageFail).
+			WithError(fmt.Errorf("error from batch publish: %s", err))
+	}
+
+	return pubsub.NewBatchPublishResponse(req.Messages, pubsub.BatchMessageSuccess)
+}
+
 // Subscribe receives data from Azure Event Hubs.
 func (aeh *AzureEventHubs) Subscribe(subscribeCtx context.Context, req pubsub.SubscribeRequest, handler pubsub.Handler) error {
 	err := aeh.validateSubscriptionAttributes()
@@ -628,6 +654,12 @@ func (aeh *AzureEventHubs) Subscribe(subscribeCtx context.Context, req pubsub.Su
 		}
 	}()
 
+	return nil
+}
+
+// BatchSubscribe receives data from Azure Event Hubs in batches.
+// TODO: implement
+func (aeh *AzureEventHubs) BatchSubscribe(ctx context.Context, req pubsub.SubscribeRequest, handler pubsub.BatchHandler) error {
 	return nil
 }
 
