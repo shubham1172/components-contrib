@@ -16,8 +16,6 @@ package pubsub
 import (
 	"context"
 	"strconv"
-
-	"golang.org/x/sync/errgroup"
 )
 
 // PubSub is the interface for message buses.
@@ -31,7 +29,7 @@ type PubSub interface {
 }
 
 type MultiPubSub interface {
-	BatchPublish(req *BatchPublishRequest) error
+	BatchPublish(req *BatchPublishRequest) BatchPublishResponse
 	BulkSubscribe(ctx context.Context, req SubscribeRequest, handler MultiMessageHandler) error
 }
 
@@ -54,25 +52,45 @@ func NewDefaultMultiPubsub(pubsub PubSub) DefaultMultiPubSub {
 }
 
 // BatchPublish publishes a batch of messages individually, as parallel requests.
+// If metadata's `batchPublishKeepOrder` is set to true, the messages are published serially.
+// This is useful if ordering of messages is required.
 // This implementation is used when the broker does not support batching.
-// If a publish message fails, the whole batch will be failed.
-func (p *DefaultMultiPubSub) BatchPublish(req *BatchPublishRequest) error {
-	errs, _ := errgroup.WithContext(context.TODO())
+func (p *DefaultMultiPubSub) BatchPublish(req *BatchPublishRequest) BatchPublishResponse {
+	resp := make([]batchPublishResponseStatus, len(req.Data))
+
 	for i := range req.Data {
 		id := i
-		errs.Go(func() error {
-			req := &PublishRequest{
-				Data:        req.Data[id],
-				PubsubName:  req.PubsubName,
-				Topic:       req.Topic,
-				Metadata:    req.Metadata,
-				ContentType: req.ContentType,
+		pr := &PublishRequest{
+			ContentType: req.ContentType,
+			Data:        req.Data[i],
+			Metadata:    req.Metadata,
+			PubsubName:  req.PubsubName,
+			Topic:       req.Topic,
+		}
+		if req.Metadata != nil && req.Metadata[batchPublishKeepOrderKey] == "true" {
+			if err := p.p.Publish(pr); err != nil {
+				results = append(results, batchPublishResponseItem{pr.Data, batchPublishResponseStatusFailure})
 			}
-			return p.p.Publish(req)
-		})
+
+		}
 	}
 
-	return errs.Wait()
+	// errs, _ := errgroup.WithContext(context.TODO())
+	// for i := range req.Data {
+	// 	id := i
+	// 	errs.Go(func() error {
+	// 		req := &PublishRequest{
+	// 			Data:        req.Data[id],
+	// 			PubsubName:  req.PubsubName,
+	// 			Topic:       req.Topic,
+	// 			Metadata:    req.Metadata,
+	// 			ContentType: req.ContentType,
+	// 		}
+	// 		return p.p.Publish(req)
+	// 	})
+	// }
+
+	// return errs.Wait()
 }
 
 // BulkSubsribe subscribes to a topic using a multi-message handler,

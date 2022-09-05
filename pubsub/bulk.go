@@ -19,6 +19,8 @@ import (
 )
 
 const (
+	// batchPublishKeepOrderKey is used to indicate whether to keep the order of messages in a batch publish request.
+	batchPublishKeepOrderKey = "batchPublishKeepOrder"
 	// maxBatchCountKey is the maximum number of messages to be published in a batch.
 	maxBatchCountKey = "maxBatchCount"
 	// maxBatchSizeBytesKey is the maximum size of a batch in bytes.

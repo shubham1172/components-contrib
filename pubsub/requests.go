@@ -31,6 +31,19 @@ type BatchPublishRequest struct {
 	Metadata    map[string]string `json:"metadata"`
 }
 
+// batchPublishResponseStatus indicates the result for a single message in a batch publish request.
+type batchPublishResponseStatus string
+
+const (
+	batchPublishResponseStatusSuccess batchPublishResponseStatus = "SUCCESS"
+	batchPublishResponseStatusFailure batchPublishResponseStatus = "FAIL"
+)
+
+// BatchPublishResponse is the response from a batch publish request.
+type BatchPublishResponse struct {
+	Status []batchPublishResponseStatus `json:"status"`
+}
+
 // SubscribeRequest is the request to subscribe to a topic.
 type SubscribeRequest struct {
 	Topic    string            `json:"topic"`
